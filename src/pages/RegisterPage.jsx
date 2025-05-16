@@ -23,8 +23,7 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // Validación básica
+
     if (formData.password !== formData.confirmPassword) {
       setError('Las contraseñas no coinciden');
       return;
@@ -32,14 +31,11 @@ const RegisterPage = () => {
 
     try {
       setLoading(true);
-      // Aquí la llamada de API
       console.log('Datos de registro:', formData);
-      
-      // Simulamos un registro exitoso
+
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      
-      navigate('/auth/login'); // Redirigir al login después del registro
+
+      navigate('/auth/login');
     } catch (err) {
       setError(err.message || 'Error al registrar el usuario');
     } finally {
@@ -48,15 +44,21 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2 className="auth-title">Crear Cuenta</h2>
-        
-        {error && <div className="auth-error">{error}</div>}
-        
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="name">Nombre Completo</label>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-8">
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Crear Cuenta</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              Nombre Completo
+            </label>
             <input
               type="text"
               id="name"
@@ -64,11 +66,14 @@ const RegisterPage = () => {
               value={formData.name}
               onChange={handleChange}
               required
+              className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="email">Correo Electrónico</label>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Correo Electrónico
+            </label>
             <input
               type="email"
               id="email"
@@ -76,11 +81,14 @@ const RegisterPage = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">Contraseña</label>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Contraseña
+            </label>
             <input
               type="password"
               id="password"
@@ -89,11 +97,14 @@ const RegisterPage = () => {
               onChange={handleChange}
               minLength="6"
               required
+              className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar Contraseña</label>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirmar Contraseña
+            </label>
             <input
               type="password"
               id="confirmPassword"
@@ -102,21 +113,25 @@ const RegisterPage = () => {
               onChange={handleChange}
               minLength="6"
               required
+              className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          <button 
-            type="submit" 
-            className="auth-button"
+
+          <button
+            type="submit"
             disabled={loading}
+            className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700 transition-colors"
           >
             {loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </form>
-        
-        <div className="auth-footer">
-          ¿Ya tienes una cuenta? <Link to="/auth/login" className="auth-link">Inicia sesión</Link>
-        </div>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          ¿Ya tienes una cuenta?{' '}
+          <Link to="/auth/login" className="text-blue-600 hover:underline">
+            Inicia sesión
+          </Link>
+        </p>
       </div>
     </div>
   );
