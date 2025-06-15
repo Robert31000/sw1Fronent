@@ -4,6 +4,8 @@ import Home from '../pages/Home';
 import Login from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
 import Dashboard from '../pages/dashboard/Dashboard';
+import CrearHabitacionForm from '../pages/Habitacion/CrearHabitacionForm';
+import VistaHabitacion from '../pages/Habitacion/VistaHabitacion';
 
 const router = createBrowserRouter([
   {
@@ -26,7 +28,22 @@ const router = createBrowserRouter([
     {
        path:'/dashboard',
        element:<Dashboard/>
+      },
+      {
+    path: '/dashboard',
+    element: <Dashboard />,
+    
+    children: [
+      {
+        path: 'crear',
+        element: <CrearHabitacionForm />
+      },
+          {
+        path: 'vista',
+        element: <VistaHabitacion />
       }
+    ]
+  }
 ]);
 
 export default router;
