@@ -1,10 +1,16 @@
 // src/pages/Habitacion/VistaHabitacion.jsx
 
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom';
+// import { furnitureCatalog } from "./dataroom/furnitureCatalog";
+import { useState } from "react";
 import Room2DView from './Room2DView'
+import Room2DEditor from './Room2DEditor';
+import RoomCustomizationPanel from "./RoomCustomizationPanel";
+import { defaultRoom } from "./models/roomModel";
 
 export default function VistaHabitacion() {
+  const [room, setRoom] = useState(defaultRoom);
   const navigate = useNavigate()
 
   // Objeto ejemplo con datos “hard-coded”
@@ -20,7 +26,11 @@ export default function VistaHabitacion() {
     colorPiso: 'Madera Natural'
   }
 
+
+
   return (
+
+    
     <div className="mt-4">
       {/* Título y botón “Volver” */}
       <div className="flex items-center justify-between mb-6">
@@ -92,6 +102,13 @@ export default function VistaHabitacion() {
               scale={70} // Puedes cambiar la escala a tu gusto
             />       
            </div>
+
+           <div>
+              <Room2DEditor room={room} setRoom={setRoom} />
+            </div>
+            <div>
+              <RoomCustomizationPanel room={room} setRoom={setRoom} />
+            </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,8 @@ import RegisterPage from '../pages/RegisterPage';
 import Dashboard from '../pages/dashboard/Dashboard';
 import CrearHabitacionForm from '../pages/Habitacion/CrearHabitacionForm';
 import VistaHabitacion from '../pages/Habitacion/VistaHabitacion';
+import CatalogPanel from '../pages/Catalogo/CatalogPanel';
+import CrearHabitacion3D from '../pages/Habitacion/CrearHabitacion3D';
 
 const router = createBrowserRouter([
   {
@@ -38,9 +40,17 @@ const router = createBrowserRouter([
         path: 'crear',
         element: <CrearHabitacionForm />
       },
-          {
+      {
         path: 'vista',
         element: <VistaHabitacion />
+      },
+      {
+        path: 'crear3d',
+        element: <CrearHabitacion3D />
+      },
+      {
+        path: 'catalogo/muebles',
+        element: <CatalogPanel />
       }
     ]
   }

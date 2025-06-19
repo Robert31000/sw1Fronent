@@ -38,7 +38,11 @@ export default function Sidebar() {
         {
           label: 'Vista de Habitación',
           to: '/dashboard/vista'
-        }
+        },
+        {
+          label: 'Crear Habitación 3D',
+          to: '/dashboard/crear3d'
+        },
       ]
     },
     {
