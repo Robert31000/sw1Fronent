@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react'
 import { Stage, Layer, Rect, Group, Text , Image as KonvaImage} from 'react-konva'
 import useImage from "use-image";
 import { furnitureCatalog } from './dataroom/furnitureCatalog'
+import jsPDF from 'jspdf';
 
 /**
  * Room2DEditor
@@ -110,8 +111,46 @@ export default function Room2DEditor({ room, preset, scale = 70 }) {
     );
   };
 
+  function handleExportImage() {
+    if (stageRef.current) {
+      const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = 'habitacion.png';
+      link.href = dataURL;
+      link.click();
+    }
+  }
+
+  function handleExportPDF() {
+    if (stageRef.current) {
+      const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [stageRef.current.width(), stageRef.current.height()]
+      });
+      pdf.addImage(dataURL, 'PNG', 0, 0, stageRef.current.width(), stageRef.current.height());
+      pdf.save('habitacion.pdf');
+    }
+  }
+
   return (
-    <div className="flex">
+    <div className="flex w-full" style={{ minHeight: roomHeightPx + 2, position: 'relative' }}>
+      {/* Panel de botones de exportación */}
+      <div className="absolute z-10 left-4 top-4 flex gap-2">
+        <button
+          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 shadow"
+          onClick={handleExportImage}
+        >
+          Exportar como imagen
+        </button>
+        <button
+          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 shadow"
+          onClick={handleExportPDF}
+        >
+          Exportar como PDF
+        </button>
+      </div>
       {/* Lado izquierdo: canvas de habitación */}
       <div
         className="border border-gray-300 bg-gray-50"
@@ -119,6 +158,7 @@ export default function Room2DEditor({ room, preset, scale = 70 }) {
           width: roomWidthPx + 2,
           height: roomHeightPx + 2,
           position: "relative",
+          flexShrink: 0,
         }}
       >
         <Stage
@@ -198,33 +238,47 @@ export default function Room2DEditor({ room, preset, scale = 70 }) {
           </Layer>
         </Stage>
       </div>
-      {/* Lado derecho: catálogo de muebles */}
-      <div className="ml-6 flex-1">
-        <h3 className="text-lg font-semibold mb-2">Catálogo de Muebles</h3>
-        <div className="grid grid-cols-1 gap-3 max-h-[80vh] overflow-y-auto">
-          {furnitureCatalog.map((item) => {
-            // Convertimos a pixeles para mostrar un “preview” pequeño
-            const widthPx = (item.ancho ?? 1) * (scale / 3);
-            const heightPx = (item.largo ?? 1) * (scale / 3);
-            return (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 p-2 bg-white shadow rounded cursor-grab"
-                draggable
-                onDragStart={() => handleDragStartFromCatalog(item)}
-              >
-                <div
-                  style={{
-                    width: widthPx,
-                    height: heightPx,
-                    backgroundColor: item.color,
-                    border: "1px solid #333",
-                  }}
+      {/* Panel lateral derecho: Catálogo visual */}
+      <div
+        className="w-56 bg-white border-l border-gray-200 p-2 overflow-y-auto"
+        style={{ minHeight: roomHeightPx + 2 }}
+      >
+        <div className="font-semibold text-gray-700 mb-2 text-center">Catálogo de muebles</div>
+        <div className="flex flex-col gap-2">
+          {furnitureCatalog.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-col items-center p-2 border rounded hover:bg-blue-50 cursor-grab"
+              draggable
+              onDragStart={() => handleDragStartFromCatalog(item)}
+              style={{ opacity: draggingFurniture?.id === item.id ? 0.5 : 1 }}
+            >
+              {/* Imagen si existe */}
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt={item.nombre || item.name}
+                  className="w-16 h-16 object-contain mb-1"
+                  draggable={false}
                 />
-                <span className="text-sm text-gray-700">{item.nombre}</span>
+              ) : (
+                <div
+                  className="w-16 h-16 flex items-center justify-center mb-1 rounded"
+                  style={{ background: item.color || "#eee" }}
+                >
+                  <span className="text-xs text-gray-600">{item.nombre || item.name}</span>
+                </div>
+              )}
+              <div className="text-xs text-gray-800 text-center">
+                {item.nombre || item.name}
               </div>
-            );
-          })}
+              {/* Dimensiones si existen */}
+              <div className="text-[10px] text-gray-500">
+                {item.ancho || item.width ? `${item.ancho || item.width}m` : ""}{" "}
+                {item.largo || item.height ? `× ${item.largo || item.height}m` : ""}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

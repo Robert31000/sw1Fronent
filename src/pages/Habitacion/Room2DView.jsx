@@ -1,137 +1,188 @@
 // src/components/Room2DView.jsx
 
-import React from 'react'
+import React, { useState, useEffect } from 'react';
 
 /**
  * Room2DView dibuja una representación sencilla de una habitación en SVG.
  * 
  * Props:
- *  - ancho: ancho de la habitación en metros (ej. 5)
- *  - largo: largo de la habitación en metros (ej. 4)
- *  - puertas: número de puertas (ej. 1)
- *  - ventanas: número de ventanas (ej. 2)
+ *  - room: objeto con las dimensiones de la habitación (ancho, largo)
+ *  - furniture: array de objetos con las dimensiones y tipo de muebles
+ *  - setFurniture: función para actualizar el array de muebles
+ *  - selectedId: identificador del mueble seleccionado
+ *  - setSelectedId: función para actualizar el identificador del mueble seleccionado
  *  - scale (opcional): escala en pixeles/metro (por defecto 80 px por metro)
  *
  * Este componente asume:
  *  - La puerta será dibujada (si existe) en la pared inferior, centrada, con ancho 0.8 m y grosor de 0.1 m.
  *  - Las ventanas (si existen 2) se dibujan: una centro de la pared izquierda y otra centro de la pared derecha, cada ventana de ancho 1 m y grosor 0.1 m.
  */
+
+// Utilidades de validación
+function isOverlapping(a, b) {
+  return !(
+    a.x + a.width <= b.x ||
+    a.x >= b.x + b.width ||
+    a.y + a.height <= b.y ||
+    a.y >= b.y + b.height
+  );
+}
+
+function isWithinRoom(f, roomWidth, roomHeight) {
+  return (
+    f.x >= 0 &&
+    f.y >= 0 &&
+    f.x + f.width <= roomWidth &&
+    f.y + f.height <= roomHeight
+  );
+}
+
 export default function Room2DView({
-  ancho = 5,
-  largo = 4,
-  puertas = 1,
-  ventanas = 2,
-  scale = 80 // 80 px por metro
+  room = { ancho: 5, largo: 4 }, // metros
+  furniture = [],
+  setFurniture,
+  selectedId,
+  setSelectedId,
+  scale = 80 // px/metro
 }) {
-  // Convertimos metros a pixeles
-  const widthPx = ancho * scale
-  const heightPx = largo * scale
+  const widthPx = room.ancho * scale;
+  const heightPx = room.largo * scale;
+  const padding = 20;
+  const svgWidth = widthPx + padding * 2;
+  const svgHeight = heightPx + padding * 2;
 
-  // Constantes de dibujo (en metros)
-  const puertaAncho = 0.8 // 0.8 m de ancho
-  const puertaGrosor = 0.1 // grosor en metros (espesor de pared)
-  const ventanaAncho = 1.0  // 1 m de ancho para cada ventana
-  const ventanaGrosor = 0.1 // grosor en metros
+  // Drag state
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Convertir a pixeles
-  const puertaAnchoPx = puertaAncho * scale
-  const puertaGrosorPx = puertaGrosor * scale
-  const ventanaAnchoPx = ventanaAncho * scale
-  const ventanaGrosorPx = ventanaGrosor * scale
+  // Eliminar mueble con Delete
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Delete' && selectedId) {
+        setFurniture(furniture.filter(f => f.id !== selectedId));
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, furniture, setFurniture, setSelectedId]);
 
-  // Coordenadas de la puerta (en una posición centrada en la pared inferior)
-  // El SVG se asume con origen (0,0) en la esquina superior izquierda,
-  // X crece hacia la derecha, Y crece hacia abajo.
-  const puertaX = (widthPx - puertaAnchoPx) / 2
-  const puertaY = heightPx - puertaGrosorPx
+  // Drag handlers
+  function onMouseDown(e, f) {
+    setDraggingId(f.id);
+    // Calcula offset entre mouse y esquina del mueble
+    const svgRect = e.target.ownerSVGElement.getBoundingClientRect();
+    const mouseX = e.clientX - svgRect.left - padding;
+    const mouseY = e.clientY - svgRect.top - padding;
+    setDragOffset({ x: mouseX - f.x * scale, y: mouseY - f.y * scale });
+  }
 
-  // Coordenadas de las ventanas:
-  // - Ventana 1 en pared izquierda, centrada verticalmente
-  const ventana1X = 0
-  const ventana1Y = (heightPx - ventanaAnchoPx) / 2
+  function onMouseMove(e) {
+    if (!draggingId) return;
+    const svg = document.getElementById('room2d-svg');
+    const svgRect = svg.getBoundingClientRect();
+    const mouseX = e.clientX - svgRect.left - padding;
+    const mouseY = e.clientY - svgRect.top - padding;
+    // Nueva posición en metros
+    let newX = (mouseX - dragOffset.x) / scale;
+    let newY = (mouseY - dragOffset.y) / scale;
+    // Encuentra el mueble
+    const idx = furniture.findIndex(f => f.id === draggingId);
+    if (idx === -1) return;
+    const moving = { ...furniture[idx], x: newX, y: newY };
+    // Validación
+    const others = furniture.filter(f => f.id !== moving.id);
+    const valid = isWithinRoom(moving, room.ancho, room.largo) &&
+      !others.some(f => isOverlapping(moving, f));
+    // Si no es válido, no actualiza
+    if (!valid) return;
+    // Actualiza posición
+    const updated = [...furniture];
+    updated[idx] = moving;
+    setFurniture(updated);
+  }
 
-  // - Ventana 2 en pared derecha, centrada verticalmente
-  const ventana2X = widthPx - ventanaGrosorPx
-  const ventana2Y = (heightPx - ventanaAnchoPx) / 2
+  function onMouseUp() {
+    setDraggingId(null);
+  }
 
-  // Para dar un poco de padding visual dentro de un contenedor, envolveremos el SVG en un <svg> más grande.
-  // Añadimos 20px de margen en cada lado (top/right/bottom/left).
-  const padding = 20
-  const svgWidth = widthPx + padding * 2
-  const svgHeight = heightPx + padding * 2
+  useEffect(() => {
+    if (draggingId) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+    }
+  });
 
+  // Colores por tipo
+  const typeColors = {
+    sofa: '#fbbf24',
+    mesa: '#60a5fa',
+    silla: '#34d399',
+    cama: '#f472b6',
+    armario: '#a78bfa',
+    otro: '#d1d5db',
+  };
+
+  // Render
   return (
     <div className="overflow-auto">
       <svg
+        id="room2d-svg"
         width={svgWidth}
         height={svgHeight}
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         className="border border-gray-300 bg-gray-50"
+        style={{ touchAction: 'none', userSelect: 'none' }}
       >
-        {/* Dibujamos el fondo gris muy claro */}
-        <rect
-          x="0"
-          y="0"
-          width={svgWidth}
-          height={svgHeight}
-          fill="#f9fafb"
-        />
-
-        {/* Dibujamos el contorno de la habitación (piso) */}
+        {/* Fondo */}
+        <rect x="0" y="0" width={svgWidth} height={svgHeight} fill="#f9fafb" />
+        {/* Habitación */}
         <rect
           x={padding}
           y={padding}
           width={widthPx}
           height={heightPx}
-          fill="#ffffff"
+          fill="#fff"
           stroke="#4a5568"
           strokeWidth="2"
         />
-
-        {/* Dibujar puerta (solo si puertas >= 1) */}
-        {puertas > 0 && (
-          <rect
-            x={padding + puertaX}
-            y={padding + puertaY}
-            width={puertaAnchoPx}
-            height={puertaGrosorPx}
-            fill="#b5651d" // marrón para la puerta
-            stroke="#78350f"
-            strokeWidth="1"
-          />
-        )}
-
-        {/* Dibujar ventanas (solo si ventanas >= 1) */}
-        {ventanas >= 1 && (
-          <>
-            {/* Ventana izquierda */}
-            <rect
-              x={padding + ventana1X}
-              y={padding + ventana1Y}
-              width={ventanaGrosorPx}
-              height={ventanaAnchoPx}
-              fill="#93c5fd" // azul claro para cristal
-              stroke="#3b82f6"
-              strokeWidth="1"
-            />
-          </>
-        )}
-        {ventanas >= 2 && (
-          <>
-            {/* Ventana derecha */}
-            <rect
-              x={padding + ventana2X}
-              y={padding + ventana2Y}
-              width={ventanaGrosorPx}
-              height={ventanaAnchoPx}
-              fill="#93c5fd"
-              stroke="#3b82f6"
-              strokeWidth="1"
-            />
-          </>
-        )}
-
-        {/* Opcional: etiquetar dimensiones con texto */}
+        {/* Muebles */}
+        {furniture.map(f => {
+          const color = typeColors[f.tipo] || typeColors.otro;
+          const isSelected = f.id === selectedId;
+          return (
+            <g key={f.id}>
+              <rect
+                x={padding + f.x * scale}
+                y={padding + f.y * scale}
+                width={f.width * scale}
+                height={f.height * scale}
+                fill={color}
+                stroke={isSelected ? '#ef4444' : '#374151'}
+                strokeWidth={isSelected ? 3 : 1}
+                style={{ cursor: 'move', opacity: draggingId === f.id ? 0.7 : 1 }}
+                onMouseDown={e => { onMouseDown(e, f); setSelectedId(f.id); }}
+              />
+              {/* Nombre */}
+              <text
+                x={padding + f.x * scale + (f.width * scale) / 2}
+                y={padding + f.y * scale + (f.height * scale) / 2}
+                textAnchor="middle"
+                alignmentBaseline="middle"
+                fontSize={14}
+                fill="#1f2937"
+                pointerEvents="none"
+              >
+                {f.nombre}
+              </text>
+            </g>
+          );
+        })}
+        {/* Dimensiones */}
         <text
           x={padding + widthPx / 2}
           y={padding - 5}
@@ -139,7 +190,7 @@ export default function Room2DView({
           fill="#4a5568"
           fontSize="12"
         >
-          {ancho} m
+          {room.ancho} m
         </text>
         <text
           x={padding - 5}
@@ -149,9 +200,10 @@ export default function Room2DView({
           fontSize="12"
           transform={`rotate(-90 ${padding - 5}, ${padding + heightPx / 2})`}
         >
-          {largo} m
+          {room.largo} m
         </text>
       </svg>
+      <div className="text-xs text-gray-500 mt-1">Arrastra los muebles. Selecciona y presiona Delete para eliminar.</div>
     </div>
-  )
+  );
 }
