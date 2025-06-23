@@ -1,7 +1,5 @@
-// src/pages/Habitacion/CrearHabitacionForm.jsx
-
-import React, { useState } from 'react'
-import axios from 'axios'
+import React, { useState } from 'react';
+import { crearHabitacion } from '../../api/habitacion';
 
 export default function CrearHabitacionForm() {
   const [form, setForm] = useState({
@@ -13,31 +11,34 @@ export default function CrearHabitacionForm() {
     ventanas: '',
     materialPared: '',
     colorPiso: ''
-  })
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
-      const response = await axios.post(
-        'http://localhost:8080/api/habitaciones',
-        {
-          nombre: form.nombre,
-          ancho: parseFloat(form.ancho),
-          largo: parseFloat(form.largo),
-          alto: parseFloat(form.alto),
-          puertas: parseInt(form.puertas, 10),
-          ventanas: parseInt(form.ventanas, 10),
-          materialPared: form.materialPared,
-          colorPiso: form.colorPiso
-        }
-      )
-      alert('Habitación guardada con éxito')
-      console.log(response.data)
-      // Opcional: limpiar formulario tras guardar
+      // parseamos numéricos antes de enviar
+      const payload = {
+        nombre: form.nombre,
+        ancho: parseFloat(form.ancho),
+        largo: parseFloat(form.largo),
+        alto: parseFloat(form.alto),
+        puertas: parseInt(form.puertas, 10),
+        ventanas: parseInt(form.ventanas, 10),
+        materialPared: form.materialPared,
+        colorPiso: form.colorPiso
+      };
+
+      const nueva = await crearHabitacion(payload);
+      alert(`Habitación "${nueva.nombre}" creada con ID ${nueva.id}`);
+      // limpiamos
       setForm({
         nombre: '',
         ancho: '',
@@ -47,12 +48,14 @@ export default function CrearHabitacionForm() {
         ventanas: '',
         materialPared: '',
         colorPiso: ''
-      })
-    } catch (error) {
-      console.error(error)
-      alert('Error al guardar habitación')
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Error al guardar habitación');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="max-w-xl mx-auto p-4 bg-white shadow-md rounded">
@@ -65,8 +68,8 @@ export default function CrearHabitacionForm() {
             onChange={handleChange}
             placeholder="Nombre"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="ancho"
             value={form.ancho}
@@ -75,8 +78,8 @@ export default function CrearHabitacionForm() {
             type="number"
             step="0.01"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="largo"
             value={form.largo}
@@ -85,8 +88,8 @@ export default function CrearHabitacionForm() {
             type="number"
             step="0.01"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="alto"
             value={form.alto}
@@ -95,50 +98,53 @@ export default function CrearHabitacionForm() {
             type="number"
             step="0.01"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="puertas"
             value={form.puertas}
             onChange={handleChange}
-            placeholder="Cantidad de puertas"
+            placeholder="Puertas"
             type="number"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="ventanas"
             value={form.ventanas}
             onChange={handleChange}
-            placeholder="Cantidad de ventanas"
+            placeholder="Ventanas"
             type="number"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="materialPared"
             value={form.materialPared}
             onChange={handleChange}
-            placeholder="Material pared"
+            placeholder="Material de pared"
             className="border p-2 rounded"
+            disabled={loading}
           />
-
           <input
             name="colorPiso"
             value={form.colorPiso}
             onChange={handleChange}
-            placeholder="Color piso"
+            placeholder="Color de piso"
             className="border p-2 rounded"
+            disabled={loading}
           />
         </div>
-
         <button
           type="submit"
-          className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+          disabled={loading}
+          className={`mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 ${
+            loading ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
-          Guardar Habitación
+          {loading ? 'Guardando…' : 'Guardar Habitación'}
         </button>
       </form>
     </div>
-  )
+  );
 }
