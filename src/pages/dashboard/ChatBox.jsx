@@ -1,3 +1,4 @@
+// src/components/ChatBox.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import axios      from 'axios';
 import { jsPDF }  from 'jspdf';
@@ -5,27 +6,26 @@ import { saveAs } from 'file-saver';
 import JSZip      from 'jszip';
 
 /* ====== Config ====== */
-// Apunta a tu endpoint en server.js
-const CHAT_API = '/api/chat';
-const MODEL    = 'gemini-2.0-flash';
+const MODEL   = 'gemini-2.0-flash';                 // 
+const APIKEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const CHAT_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
+/* ====== Componente ====== */
 export default function ChatBox({ projectId }) {
   const [text,     setText] = useState('');
-  const [messages, setMsgs] = useState([]);
+  const [messages, setMsgs] = useState([]);         
   const endRef = useRef(null);
 
   /* --- auto-scroll --- */
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   /* --- Helpers --- */
   const fileToB64 = (file) =>
     new Promise((ok, err) => {
-      const reader = new FileReader();
-      reader.onload  = () => ok(reader.result);
-      reader.onerror = err;
-      reader.readAsDataURL(file);
+      const r = new FileReader();
+      r.onload = () => ok(r.result);   // incluye “data:image/...;base64,”
+      r.onerror = err;
+      r.readAsDataURL(file);
     });
 
   /* --- Enviar texto --- */
@@ -33,31 +33,32 @@ export default function ChatBox({ projectId }) {
     e?.preventDefault();
     if (!text.trim()) return;
 
-    // Construye el mensaje del usuario
     const userMsg = { id: crypto.randomUUID(), role: 'user', content: text };
-    setMsgs(ms => [...ms, userMsg]);
+    setMsgs((ms) => [...ms, userMsg]);
     setText('');
 
     try {
       const { data } = await axios.post(
-        CHAT_API,
+        CHAT_URL,
         {
           model: MODEL,
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            ...messages.map(m => ({ role: m.role, content: m.content })),
-            { role: userMsg.role, content: userMsg.content }
-          ]
+          messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${APIKEY}`,
+          },
         }
       );
 
-      const reply = data.choices[0].message.content;
-      setMsgs(ms => [...ms, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
+      const reply = data.choices?.[0]?.message?.content ?? '[Sin respuesta]';
+      setMsgs((ms) => [...ms, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
     } catch (err) {
-      console.error('Error en /api/chat:', err.response?.data || err.message);
-      setMsgs(ms => [
+      console.error('Gemini error:', err);
+      setMsgs((ms) => [
         ...ms,
-        { id: crypto.randomUUID(), role: 'assistant', content: '❌ Error con el servidor de chat.' },
+        { id: crypto.randomUUID(), role: 'assistant', content: '❌ Error con Gemini.' },
       ]);
     }
   };
@@ -66,36 +67,40 @@ export default function ChatBox({ projectId }) {
   const handleImage = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    e.target.value = '';
+    e.target.value = ''; // reset para poder subir la misma foto de nuevo
 
     const b64 = await fileToB64(file);
     const photoPrompt = {
       role: 'user',
-      content: JSON.stringify({ type: 'image_url', url: b64 })
+      content: [
+        { type: 'text', text: 'Describe la foto:' },
+        { type: 'image_url', image_url: { url: b64 } },
+      ],
     };
 
-    setMsgs(ms => [...ms, { id: crypto.randomUUID(), role: 'user', content: '[Imagen adjunta]' }]);
+    // Muestra inmediatamente que el usuario envió una imagen
+    setMsgs((ms) => [
+      ...ms,
+      { id: crypto.randomUUID(), role: 'user', content: '[Imagen adjunta]' },
+    ]);
 
     try {
       const { data } = await axios.post(
-        CHAT_API,
+        CHAT_URL,
         {
           model: MODEL,
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            ...messages,
-            photoPrompt
-          ]
-        }
+          messages: [...messages, photoPrompt],
+        },
+        { headers: { Authorization: `Bearer ${APIKEY}` } }
       );
 
-      const reply = data.choices[0].message.content;
-      setMsgs(ms => [...ms, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
+      const reply = data.choices?.[0]?.message?.content ?? '[Sin respuesta]';
+      setMsgs((ms) => [...ms, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
     } catch (err) {
-      console.error('Error imagen en /api/chat:', err.response?.data || err.message);
-      setMsgs(ms => [
+      console.error('Gemini error (img):', err);
+      setMsgs((ms) => [
         ...ms,
-        { id: crypto.randomUUID(), role: 'assistant', content: '❌ Error al procesar la imagen.' },
+        { id: crypto.randomUUID(), role: 'assistant', content: '❌ Error con la imagen.' },
       ]);
     }
   };
