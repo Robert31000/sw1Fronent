@@ -36,11 +36,11 @@ export default function Sidebar() {
           to: '/dashboard/crear'
         },
         {
-          label: 'Vista de Habitación',
+          label: 'Vista de Habitación 2D',
           to: '/dashboard/vista'
         },
         {
-          label: 'Crear Habitación 3D',
+          label: 'Vista Habitación 3D',
           to: '/dashboard/crear3d'
         },
       ]
