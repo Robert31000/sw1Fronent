@@ -7,9 +7,8 @@ import JSZip      from 'jszip';
 
 /* ====== Config ====== */
 const MODEL   = 'gemini-2.0-flash';                 // 
-const APIKEY  = 'AIzaSyBMgZFNy6rxIMvE2TTaXsdT6GspUUFWtek';   
+const APIKEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const CHAT_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-//AIzaSyBMgZFNy6rxIMvE2TTaXsdT6GspUUFWtek
 
 /* ====== Componente ====== */
 export default function ChatBox({ projectId }) {
