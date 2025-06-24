@@ -12,6 +12,242 @@ export default function CrearHabitacion3D() {
         );
       };
 
+  // Función para descargar los muebles de la habitación
+  const handleDownloadFurniture = () => {
+    if (furniture.length === 0) {
+      alert('No hay muebles en la habitación para descargar');
+      return;
+    }
+
+    try {
+      // Crear objeto con los datos de los muebles
+      const furnitureData = {
+        furniture: furniture,
+        downloadDate: new Date().toISOString(),
+        totalItems: furniture.length,
+        roomInfo: {
+          width: room.width,
+          height: room.height,
+          depth: room.depth
+        }
+      };
+
+      // Convertir a JSON
+      const jsonString = JSON.stringify(furnitureData, null, 2);
+      
+      console.log('Datos a descargar:', furnitureData);
+      console.log('JSON string length:', jsonString.length);
+      
+      // Crear blob y descargar
+      const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `muebles-habitacion-${new Date().toISOString().split('T')[0]}.json`;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Limpiar URL después de un pequeño delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      console.log('Descarga iniciada');
+    } catch (error) {
+      console.error('Error al descargar:', error);
+      alert('Error al descargar los muebles: ' + error.message);
+    }
+  };
+
+  // Función para descargar los muebles de la habitación en CSV
+  const handleDownloadFurnitureCSV = () => {
+    if (furniture.length === 0) {
+      alert('No hay muebles en la habitación para descargar');
+      return;
+    }
+
+    try {
+      // Crear encabezados CSV
+      const headers = ['Tipo', 'Posición X', 'Posición Y', 'Posición Z', 'Tamaño', 'Color', 'Modelo'];
+      const csvRows = [headers.join(',')];
+      
+      // Agregar datos de cada mueble
+      furniture.forEach(item => {
+        const row = [
+          item.type || 'N/A',
+          item.position?.[0] || 0,
+          item.position?.[1] || 0,
+          item.position?.[2] || 0,
+          item.size ? `[${item.size.join(',')}]` : 'N/A',
+          item.color || 'N/A',
+          item.modelPath || 'N/A'
+        ];
+        csvRows.push(row.join(','));
+      });
+      
+      const csvString = csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `muebles-habitacion-${new Date().toISOString().split('T')[0]}.csv`;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      console.log('Descarga CSV iniciada');
+    } catch (error) {
+      console.error('Error al descargar CSV:', error);
+      alert('Error al descargar los muebles en CSV: ' + error.message);
+    }
+  };
+
+  // Función para descargar los archivos .glb de los muebles
+  const handleDownloadGLBModels = async () => {
+    if (furniture.length === 0) {
+      alert('No hay muebles en la habitación para descargar');
+      return;
+    }
+
+    try {
+      // Filtrar solo muebles que tienen modelos 3D
+      const furnitureWithModels = furniture.filter(item => item.modelUrl || item.modelPath);
+      
+      if (furnitureWithModels.length === 0) {
+        alert('No hay muebles con modelos 3D para descargar');
+        return;
+      }
+
+      console.log('Descargando modelos 3D:', furnitureWithModels);
+
+      // Descargar cada modelo individualmente
+      for (const item of furnitureWithModels) {
+        const modelUrl = item.modelUrl || item.modelPath;
+        const fileName = modelUrl.split('/').pop(); // Obtener nombre del archivo
+        
+        try {
+          const response = await fetch(modelUrl);
+          if (!response.ok) {
+            console.warn(`No se pudo descargar ${fileName}: ${response.statusText}`);
+            continue;
+          }
+          
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          link.style.display = 'none';
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+          }, 100);
+          
+          console.log(`Modelo descargado: ${fileName}`);
+          
+          // Pequeña pausa entre descargas
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          console.error(`Error descargando ${fileName}:`, error);
+        }
+      }
+      
+      alert(`Descarga completada. Se descargaron ${furnitureWithModels.length} modelos 3D.`);
+      
+    } catch (error) {
+      console.error('Error al descargar modelos:', error);
+      alert('Error al descargar los modelos 3D: ' + error.message);
+    }
+  };
+
+  // Función para crear un archivo ZIP con todos los modelos
+  const handleDownloadAllAsZip = async () => {
+    if (furniture.length === 0) {
+      alert('No hay muebles en la habitación para descargar');
+      return;
+    }
+
+    try {
+      // Necesitamos importar JSZip dinámicamente
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      // Agregar el JSON con los datos
+      const furnitureData = {
+        furniture: furniture,
+        downloadDate: new Date().toISOString(),
+        totalItems: furniture.length,
+        roomInfo: {
+          width: room.width,
+          height: room.height,
+          depth: room.depth
+        }
+      };
+      
+      zip.file('muebles-data.json', JSON.stringify(furnitureData, null, 2));
+      
+      // Filtrar muebles con modelos 3D
+      const furnitureWithModels = furniture.filter(item => item.modelUrl || item.modelPath);
+      
+      // Descargar y agregar modelos al ZIP
+      for (const item of furnitureWithModels) {
+        const modelUrl = item.modelUrl || item.modelPath;
+        const fileName = modelUrl.split('/').pop();
+        
+        try {
+          const response = await fetch(modelUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            zip.file(`models/${fileName}`, blob);
+            console.log(`Modelo agregado al ZIP: ${fileName}`);
+          }
+        } catch (error) {
+          console.warn(`No se pudo agregar ${fileName} al ZIP:`, error);
+        }
+      }
+      
+      // Generar y descargar el ZIP
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `habitacion-completa-${new Date().toISOString().split('T')[0]}.zip`;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      console.log('ZIP descargado con éxito');
+      
+    } catch (error) {
+      console.error('Error al crear ZIP:', error);
+      alert('Error al crear el archivo ZIP: ' + error.message);
+    }
+  };
+
   // Estado para la habitación
   const [room, setRoom] = useState({
     width: 5,
@@ -453,6 +689,42 @@ export default function CrearHabitacion3D() {
           </div>
           <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
             <h3 className="text-lg font-semibold text-indigo-600 mb-2">Muebles Añadidos</h3>
+            {/* Botones para descargar muebles */}
+            <div className="mb-4 space-y-2">
+              <div className="text-sm text-gray-600 mb-2">
+                Total de muebles: <span className="font-semibold">{furniture.length}</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={handleDownloadFurniture}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                  disabled={furniture.length === 0}
+                >
+                  📥 Descargar JSON
+                </button>
+                <button
+                  onClick={handleDownloadFurnitureCSV}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                  disabled={furniture.length === 0}
+                >
+                  📊 Descargar CSV
+                </button>
+                <button
+                  onClick={handleDownloadGLBModels}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                  disabled={furniture.length === 0}
+                >
+                  📁 Descargar Modelos 3D
+                </button>
+                <button
+                  onClick={handleDownloadAllAsZip}
+                  className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                  disabled={furniture.length === 0}
+                >
+                  📦 Descargar ZIP
+                </button>
+              </div>
+            </div>
             {/* Lista de muebles añadidos con opción de eliminar */}
             <div className="mb-4">
               <ul>

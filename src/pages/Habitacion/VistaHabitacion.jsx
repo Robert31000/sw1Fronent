@@ -69,25 +69,148 @@ export default function VistaHabitacion() {
 
   // Exportar a imagen
   async function handleExportImage() {
-    const svg = document.getElementById('room2d-svg');
-    if (!svg) return;
-    const canvas = await html2canvas(svg.parentNode, { backgroundColor: null });
-    const dataURL = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = 'habitacion.png';
-    link.href = dataURL;
-    link.click();
+    try {
+      const svg = document.getElementById('room2d-svg');
+      if (!svg) {
+        alert('No se encontró el elemento SVG para exportar');
+        return;
+      }
+
+      // Configuración específica para html2canvas
+      const canvas = await html2canvas(svg.parentNode, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Mejor calidad
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: true,
+        logging: false,
+        width: svg.parentNode.offsetWidth,
+        height: svg.parentNode.offsetHeight
+      });
+
+      const dataURL = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = `habitacion-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataURL;
+      link.click();
+    } catch (error) {
+      console.error('Error al exportar imagen:', error);
+      alert('Error al exportar la imagen: ' + error.message);
+    }
+  }
+
+  // Exportar a imagen (método alternativo)
+  async function handleExportImageAlternative() {
+    try {
+      const svg = document.getElementById('room2d-svg');
+      if (!svg) {
+        alert('No se encontró el elemento SVG para exportar');
+        return;
+      }
+
+      // Crear una copia del SVG con colores seguros
+      const svgClone = svg.cloneNode(true);
+      
+      // Reemplazar colores problemáticos con colores seguros
+      const elements = svgClone.querySelectorAll('*');
+      elements.forEach(element => {
+        const computedStyle = window.getComputedStyle(element);
+        const backgroundColor = computedStyle.backgroundColor;
+        const color = computedStyle.color;
+        
+        // Reemplazar colores oklch con colores hex seguros
+        if (backgroundColor && backgroundColor.includes('oklch')) {
+          element.style.backgroundColor = '#ffffff';
+        }
+        if (color && color.includes('oklch')) {
+          element.style.color = '#000000';
+        }
+      });
+
+      // Convertir SVG a string
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      // Crear canvas y dibujar SVG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        const dataURL = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = `habitacion-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = dataURL;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+      };
+      
+      img.src = url;
+      
+    } catch (error) {
+      console.error('Error al exportar imagen (método alternativo):', error);
+      alert('Error al exportar la imagen: ' + error.message);
+    }
   }
 
   // Exportar a PDF
   async function handleExportPDF() {
-    const svg = document.getElementById('room2d-svg');
-    if (!svg) return;
-    const canvas = await html2canvas(svg.parentNode, { backgroundColor: null });
-    const dataURL = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
-    pdf.addImage(dataURL, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save('habitacion.pdf');
+    try {
+      const svg = document.getElementById('room2d-svg');
+      if (!svg) {
+        alert('No se encontró el elemento SVG para exportar');
+        return;
+      }
+
+      // Configuración específica para html2canvas
+      const canvas = await html2canvas(svg.parentNode, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Mejor calidad
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: true,
+        logging: false,
+        width: svg.parentNode.offsetWidth,
+        height: svg.parentNode.offsetHeight
+      });
+
+      const dataURL = canvas.toDataURL('image/png', 1.0);
+      
+      // Crear PDF con dimensiones apropiadas
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Agregar imagen al PDF
+      pdf.addImage(dataURL, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Si la imagen es más alta que una página, agregar páginas adicionales
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(dataURL, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`habitacion-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('Error al exportar el PDF: ' + error.message);
+    }
   }
 
   return (
@@ -167,6 +290,12 @@ export default function VistaHabitacion() {
                 onClick={handleExportPDF}
               >
                 Exportar como PDF
+              </button>
+              <button
+                className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 shadow"
+                onClick={handleExportImageAlternative}
+              >
+                Exportar imagen (alt)
               </button>
             </div>
             {/* Área de drop para muebles */}

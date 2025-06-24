@@ -193,7 +193,7 @@ const Room3D = ({
           className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 shadow"
           onClick={handleExportGLB}
         >
-          Exportar muebles 3D (GLB)
+          {/* Exportar muebles 3D (GLB) */}
         </button>
       </div>
       <Canvas
